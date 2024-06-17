@@ -1,118 +1,220 @@
-import Image from "next/image";
-import { Inter } from "next/font/google";
+// pages/index.tsx
 
-const inter = Inter({ subsets: ["latin"] });
+import { useState, useEffect } from 'react';
 
-export default function Home() {
+const Home = () => {
+  const [tasks, setTasks] = useState<{ id: number; title: string; completed: boolean }[]>([]);
+  const [inputValue, setInputValue] = useState<string>('');
+  const [editTaskId, setEditTaskId] = useState<number | null>(null);
+  const [editTaskValue, setEditTaskValue] = useState<string>('');
+  const [currentTime, setCurrentTime] = useState<string>('');
+  const [currentDate, setCurrentDate] = useState<string>('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [filter, setFilter] = useState<string>('all');
+
+  useEffect(() => {
+    const storedTasks = localStorage.getItem('tasks');
+    if (storedTasks) {
+      setTasks(JSON.parse(storedTasks));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('en-US'));
+      setCurrentDate(
+          now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+      );
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const addTask = () => {
+    if (inputValue.trim()) {
+      const newTask = {
+        id: tasks.length > 0 ? tasks[tasks.length - 1].id + 1 : 1,
+        title: inputValue.trim(),
+        completed: false,
+      };
+      setTasks([...tasks, newTask]);
+      setInputValue('');
+    }
+  };
+
+  const removeTask = (taskId: number) => {
+    const updatedTasks = tasks.filter((task) => task.id !== taskId);
+    setTasks(updatedTasks);
+    if (editTaskId === taskId) {
+      setEditTaskId(null);
+      setEditTaskValue('');
+    }
+  };
+
+  const toggleCompletion = (taskId: number) => {
+    const updatedTasks = tasks.map((task) =>
+        task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
+    setTasks(updatedTasks);
+  };
+
+  const startEditing = (taskId: number, taskTitle: string) => {
+    setEditTaskId(taskId);
+    setEditTaskValue(taskTitle);
+  };
+
+  const cancelEditing = () => {
+    setEditTaskId(null);
+    setEditTaskValue('');
+  };
+
+  const saveEditedTask = (taskId: number) => {
+    const updatedTasks = tasks.map((task) =>
+        task.id === taskId ? { ...task, title: editTaskValue } : task
+    );
+    setTasks(updatedTasks);
+    setEditTaskId(null);
+    setEditTaskValue('');
+  };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === 'all') return true;
+    if (filter === 'active') return !task.completed;
+    if (filter === 'completed') return task.completed;
+    return true;
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme) {
+      setTheme(storedTheme as 'light' | 'dark');
+    }
+  }, []);
+
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+      <div className={`min-h-screen flex flex-col items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-black' : 'bg-gray-100 text-black'}`}>
+        <div className="max-w-screen-md w-full p-8 bg-white shadow-md rounded-lg dark:bg-gray-800">
+          <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-black">To-Do List by Houssam</h1>
+          <p className="text-center text-gray-500 mb-4 dark:text-gray-400">{currentDate}</p>
+          <p className="text-center text-gray-500 mb-4 dark:text-gray-400">Current Time: {currentTime}</p>
+          <div className="flex mb-4">
+            <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Enter a task"
+                className="p-4 mr-4 flex-1 border border-gray-300 rounded-md focus:outline-none dark:bg-gray-700 dark:text-black dark:border-gray-600"
             />
-          </a>
+            <button
+                onClick={addTask}
+                className="p-4 bg-blue-500 text-black rounded-md cursor-pointer hover:bg-blue-600"
+            >
+              Add Task
+            </button>
+          </div>
+          <div className="mb-4 flex justify-center">
+            <button
+                className={`mx-2 p-2 ${filter === 'all' ? 'bg-blue-500 text-black' : 'bg-gray-300 text-gray-600'} rounded-md cursor-pointer hover:bg-blue-600 dark:bg-gray-700 dark:text-black`}
+                onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+            <button
+                className={`mx-2 p-2 ${filter === 'active' ? 'bg-blue-500 text-black' : 'bg-gray-300 text-gray-600'} rounded-md cursor-pointer hover:bg-blue-600 dark:bg-gray-700 dark:text-black`}
+                onClick={() => setFilter('active')}
+            >
+              Active
+            </button>
+            <button
+                className={`mx-2 p-2 ${filter === 'completed' ? 'bg-blue-500 text-black' : 'bg-gray-300 text-gray-600'} rounded-md cursor-pointer hover:bg-blue-600 dark:bg-gray-700 dark:text-black`}
+                onClick={() => setFilter('completed')}
+            >
+              Completed
+            </button>
+          </div>
+          <ul className="p-0">
+            {filteredTasks.map((task) => (
+                <li
+                    key={task.id}
+                    className={`bg-white shadow-md mb-4 rounded-md p-4 flex justify-between items-center dark:bg-gray-700 ${task.completed && 'opacity-50'}`}
+                >
+                  {editTaskId === task.id ? (
+                      <input
+                          type="text"
+                          value={editTaskValue}
+                          onChange={(e) => setEditTaskValue(e.target.value)}
+                          className="p-2 border border-gray-300 rounded-md focus:outline-none dark:bg-gray-600 dark:text-black dark:border-gray-500"
+                      />
+                  ) : (
+                      <span className="flex-1 dark:text-black">{task.title}</span>
+                  )}
+                  <div>
+                    {editTaskId === task.id ? (
+                        <>
+                          <button
+                              onClick={() => saveEditedTask(task.id)}
+                              className="text-green-500 cursor-pointer hover:text-green-600"
+                          >
+                            Save
+                          </button>
+                          <button
+                              onClick={cancelEditing}
+                              className="ml-2 text-gray-500 cursor-pointer hover:text-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                    ) : (
+                        <>
+                          <button
+                              onClick={() => startEditing(task.id, task.title)}
+                              className="text-blue-500 cursor-pointer hover:text-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                              onClick={() => toggleCompletion(task.id)}
+                              className={`ml-2 text-green-500 cursor-pointer hover:text-green-600 ${task.completed && 'text-gray-400'}`}
+                          >
+                            {task.completed ? 'Completed' : 'Mark Complete'}
+                          </button>
+                          <button
+                              onClick={() => removeTask(task.id)}
+                              className="ml-2 text-red-500 cursor-pointer hover:text-red-600"
+                          >
+                            Remove
+                          </button>
+                        </>
+                    )}
+                  </div>
+                </li>
+            ))}
+          </ul>
         </div>
+        <button
+            onClick={toggleTheme}
+            className={`fixed bottom-4 right-4 p-3 bg-gray-300 text-gray-800 rounded-full ${theme === 'dark' ? 'hover:bg-gray-400' : 'hover:bg-gray-700'}`}
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
   );
-}
+};
+
+export default Home;

@@ -17,6 +17,7 @@
 }
 
 body {
+  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
@@ -28,6 +29,16 @@ body {
 
 @layer utilities {
   .text-balance {
-    text-wrap: balance;
+    text-wrap: normal;
   }
+}
+
+/* styles/globals.css */
+
+:root {
+  --foreground-light: #333;
+  --foreground-dark: #f5f5f5;
+  --background-light: #ffffff;
+  --background-dark: #1a202c;
+  --accent-color: #3182ce;
 }
